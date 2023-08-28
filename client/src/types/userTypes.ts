@@ -1,6 +1,7 @@
 export type UserType = {
   id: number;
   name: string;
+  isActivated: boolean;
 };
 
 export type UserFormType = {

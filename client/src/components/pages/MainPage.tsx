@@ -10,7 +10,9 @@ export default function MainPage(): JSX.Element {
   return (
     <Container>
       <Row>
-        {user.status === 'success' && <Col>{`Hello, ${user.data.name}`}</Col>}
+        {user.status === 'success' && user.data.isActivated && (
+          <Col>{`Hello, ${user.data.name}!`}</Col>
+        )}
       </Row>
     </Container>
   );

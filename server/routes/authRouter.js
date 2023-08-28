@@ -1,17 +1,23 @@
 const router = require('express').Router;
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const uuid = require('uuid');
 const { User } = require('../db/models');
+const { generateToken } = require('../service/tokenService');
 const sendActivationMail = require('../service/mailService');
-const { generateTokens, saveToken } = require('../service/tokenService');
 
 const authRouter = router();
 
 authRouter.get('/check', (req, res) => {
-  if (!req.session.user) {
+  const { token } = req.cookies;
+
+  const decodedData = jwt.verify(token, process.env.JWT_SECRET);
+
+  if (!decodedData) {
     res.status(401).json({ message: 'no cookies' });
   }
-  res.json(req.session.user);
+
+  res.json(decodedData);
 });
 
 authRouter.post('/signup', async (req, res) => {
@@ -34,11 +40,11 @@ authRouter.post('/signup', async (req, res) => {
     },
   });
 
+  await sendActivationMail(email, `${process.env.API_URL}/api/auth/activate/${activationLink}`);
+
   if (!created) {
     res.status(400).json({ message: 'Такой пользователь уже существует' });
   }
-
-  await sendActivationMail(email, `${process.env.API_URL}/api/auth/activate/${activationLink}`);
 
   const userInfo = {
     id: user.id,
@@ -47,25 +53,11 @@ authRouter.post('/signup', async (req, res) => {
     isActivated: user.isActivated,
   };
 
-  const tokens = generateTokens(userInfo);
+  const token = generateToken(userInfo);
 
-  await saveToken(user.id, tokens.refreshToken);
+  res.cookie('token', token, { httpOnly: true });
 
-  res.cookie('refreshToken', tokens.refreshToken, {
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-    httpOnly: true,
-  });
-
-  return res.json({ ...tokens, user: userInfo });
-
-  // req.session.user = {
-  //   id: user.id,
-  //   email: user.email,
-  //   name: user.name,
-  // };
-
-  // return res.json(req.session.user);
-
+  return res.json(userInfo);
 });
 
 authRouter.post('/signin', async (req, res) => {
@@ -75,27 +67,45 @@ authRouter.post('/signin', async (req, res) => {
     res.status(400).json({ message: 'Заполните все поля' });
   }
 
-  // const hash = await bcrypt.hash(password, 10);
-
   const user = await User.findOne({ where: { email } });
 
   if (!user || !(await bcrypt.compare(password, user?.password))) {
     res.status(400).json({ message: 'Неверная электронная почта или пароль' });
   }
 
-  req.session.user = {
+  const userInfo = {
     id: user.id,
-    email: user.email,
     name: user.name,
+    email: user.email,
+    isActivated: user.isActivated,
   };
 
-  return res.json(req.session.user);
+  // console.log(user);
+
+  const token = generateToken(userInfo);
+  res.cookie('token', token, { httpOnly: true });
+
+  res.json(userInfo);
 });
 
 authRouter.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.clearCookie('user_sid');
+  res.clearCookie('token');
   res.sendStatus(200);
+});
+
+authRouter.get('/activate/:activationLink', async (req, res) => {
+  const { activationLink } = req.params;
+
+  const user = await User.findOne({ where: { activationLink } });
+
+  if (!user) {
+    res.json({ message: 'Такого пользователя не существует или ссылка ошибочная' });
+  }
+
+  user.isActivated = true;
+  await user.save();
+
+  res.redirect('http://localhost:3000/');
 });
 
 module.exports = authRouter;

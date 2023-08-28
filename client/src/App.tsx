@@ -9,7 +9,7 @@ import { useAppDispatch, useAppSelector } from './hooks/redux';
 import checkAuthThunk from './features/redux/actions/authThunk';
 
 function App(): JSX.Element {
-  const { logoutHandler, signInHandler, signUpHandler } = useAuth();
+  const { signInHandler, signUpHandler } = useAuth();
 
   const user = useAppSelector((state) => state.user);
   const dispatch = useAppDispatch();

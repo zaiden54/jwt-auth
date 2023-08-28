@@ -20,6 +20,7 @@ module.exports = {
       },
       isActivated: {
         type: Sequelize.BOOLEAN,
+        defaultValue: false,
       },
       activationLink: {
         type: Sequelize.STRING,
