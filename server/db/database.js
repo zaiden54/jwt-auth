@@ -1,15 +1,8 @@
-// require('dotenv').config();
-const dotenv = require('dotenv');
-
-dotenv.config();
+require('dotenv').config();
 
 module.exports = {
   development: {
-    username: 'zaiden',
-    password: '123',
-    database: 'jwt-auth',
-    host: '127.0.0.1',
-    dialect: 'postgres',
+    use_env_variable: 'DB_URL',
     logging: false,
   },
   test: {
