@@ -3,10 +3,15 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import { useParams } from 'react-router-dom';
 
-function AuthPage(): JSX.Element {
+type AuthPageProps = {
+  signUpHandler: (e: React.FormEvent<HTMLFormElement>) => void;
+  signInHandler: (e: React.FormEvent<HTMLFormElement>) => void;
+}
+
+function AuthPage({signUpHandler, signInHandler}: AuthPageProps): JSX.Element {
   const { type } = useParams();
   return (
-    <Form>
+    <Form onSubmit={type === 'signup' ? signUpHandler : signInHandler}>
       {type === 'signup' && (
         <Form.Group className="mb-3" controlId="formBasicName">
           <Form.Label>Username</Form.Label>

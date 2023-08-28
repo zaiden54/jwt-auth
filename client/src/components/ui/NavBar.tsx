@@ -3,8 +3,12 @@ import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
 import { Link } from 'react-router-dom';
+import Button from 'react-bootstrap/Button';
+import useAuth from '../../hooks/useAuth';
 
 function NavBar(): JSX.Element {
+  const { logoutHandler } = useAuth();
+
   return (
     <Navbar expand="lg" className="bg-body-tertiary">
       <Container>
@@ -23,9 +27,9 @@ function NavBar(): JSX.Element {
             <Link to="/auth/signin" className="nav-link">
               SignIn
             </Link>
-            <Link to="/" className="nav-link">
+            <Button className="nav-link" onClick={logoutHandler}>
               Logout
-            </Link>
+            </Button>
           </Nav>
         </Navbar.Collapse>
       </Container>
