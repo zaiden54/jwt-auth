@@ -1,6 +1,9 @@
 const router = require('express').Router;
 const bcrypt = require('bcrypt');
+const uuid = require('uuid');
 const { User } = require('../db/models');
+const sendActivationMail = require('../service/mailService');
+const { generateTokens, saveToken } = require('../service/tokenService');
 
 const authRouter = router();
 
@@ -19,6 +22,7 @@ authRouter.post('/signup', async (req, res) => {
   }
 
   const hash = await bcrypt.hash(password, 10);
+  const activationLink = uuid.v4();
 
   const [user, created] = await User.findOrCreate({
     where: { email },
@@ -26,6 +30,7 @@ authRouter.post('/signup', async (req, res) => {
       name,
       email,
       password: hash,
+      activationLink,
     },
   });
 
@@ -33,13 +38,34 @@ authRouter.post('/signup', async (req, res) => {
     res.status(400).json({ message: 'Такой пользователь уже существует' });
   }
 
-  req.session.user = {
+  await sendActivationMail(email, `${process.env.API_URL}/api/auth/activate/${activationLink}`);
+
+  const userInfo = {
     id: user.id,
-    email: user.email,
     name: user.name,
+    email: user.email,
+    isActivated: user.isActivated,
   };
 
-  return res.json(req.session.user);
+  const tokens = generateTokens(userInfo);
+
+  await saveToken(user.id, tokens.refreshToken);
+
+  res.cookie('refreshToken', tokens.refreshToken, {
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+  });
+
+  return res.json({ ...tokens, user: userInfo });
+
+  // req.session.user = {
+  //   id: user.id,
+  //   email: user.email,
+  //   name: user.name,
+  // };
+
+  // return res.json(req.session.user);
+
 });
 
 authRouter.post('/signin', async (req, res) => {
