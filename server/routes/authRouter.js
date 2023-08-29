@@ -1,7 +1,7 @@
 const router = require('express').Router;
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const uuid = require('uuid');
+const jwt = require('jsonwebtoken');
 const { User } = require('../db/models');
 const { generateToken } = require('../service/tokenService');
 const sendActivationMail = require('../service/mailService');
@@ -13,7 +13,7 @@ authRouter.get('/check', (req, res) => {
 
   const decodedData = jwt.verify(token, process.env.JWT_SECRET);
 
-  if (!decodedData) {
+  if (!token || !decodedData) {
     res.status(401).json({ message: 'no cookies' });
   }
 
@@ -80,8 +80,6 @@ authRouter.post('/signin', async (req, res) => {
     isActivated: user.isActivated,
   };
 
-  // console.log(user);
-
   const token = generateToken(userInfo);
   res.cookie('token', token, { httpOnly: true });
 
@@ -104,6 +102,16 @@ authRouter.get('/activate/:activationLink', async (req, res) => {
 
   user.isActivated = true;
   await user.save();
+
+  const userInfo = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    isActivated: user.isActivated,
+  };
+
+  const token = generateToken(userInfo);
+  res.cookie('token', token, { httpOnly: true });
 
   res.redirect('http://localhost:3000/');
 });
