@@ -1,14 +1,20 @@
 const router = require('express').Router;
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const { User } = require('../db/models');
 
 const authRouter = router();
 
 authRouter.get('/check', (req, res) => {
-  if (!req.session.user) {
+  const { token } = req.cookies;
+
+  const decodedData = jwt.verify(token, process.env.JWT_SECRET)
+
+  if (!token || !decodedData) {
     res.status(401).json({ message: 'no cookies' });
   }
-  res.json(req.session.user);
+
+  res.json(decodedData);
 });
 
 authRouter.post('/signup', async (req, res) => {
@@ -33,13 +39,17 @@ authRouter.post('/signup', async (req, res) => {
     res.status(400).json({ message: 'Такой пользователь уже существует' });
   }
 
-  req.session.user = {
+  const userInfo = {
     id: user.id,
     email: user.email,
     name: user.name,
   };
 
-  return res.json(req.session.user);
+  const token = jwt.sign(userInfo, process.env.JWT_SECRET, { expiresIn: '30m' });
+
+  res.cookie('token', token, { httpOnly: true });
+
+  return res.json(userInfo);
 });
 
 authRouter.post('/signin', async (req, res) => {
@@ -57,18 +67,21 @@ authRouter.post('/signin', async (req, res) => {
     res.status(400).json({ message: 'Неверная электронная почта или пароль' });
   }
 
-  req.session.user = {
+  const userInfo = {
     id: user.id,
     email: user.email,
     name: user.name,
   };
 
-  return res.json(req.session.user);
+  const token = jwt.sign(userInfo, process.env.JWT_SECRET, { expiresIn: '30m' });
+  res.cookie('token', token, { httpOnly: true });
+
+  return res.json(userInfo);
 });
 
 authRouter.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.clearCookie('user_sid');
+  // req.session.destroy();
+  res.clearCookie('token');
   res.sendStatus(200);
 });
 
